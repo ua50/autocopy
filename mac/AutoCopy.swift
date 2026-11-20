@@ -289,7 +289,7 @@ struct AboutView: View {
             Text("Виділив текст — і він уже в буфері обміну.")
                 .padding(.top, 4)
             // \u{00A0} keeps «1 / 2» on one line
-            Text("Ctrl+Option+V — вибрати одне з двох останніх скопійованих.\nПравий клік у текстовому полі — панель «1\u{00A0}/\u{00A0}2».\nСкопійоване зберігається лише в пам'яті,\nна диск і в мережу нічого не передається.")
+            Text("Ctrl+Option+V — вибрати одне з двох останніх скопійованих.\nПравий клік у текстовому полі — панель «1\u{00A0}/\u{00A0}2».\nСкопійоване зберігається лише в пам'яті й нікуди не передається.\nВ інтернет програма звертається тільки тоді,\nколи ви натиснете «Перевірити оновлення».")
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Link("Сторінка програми й оновлення", destination: URL(string: homePage)!)
@@ -590,6 +590,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(.separator())
         menu.addItem(ClosureItem(title: "Про AutoCopy…") { [weak self] in self?.showAbout() })
+        menu.addItem(ClosureItem(title: "Перевірити оновлення…") { [weak self] in self?.checkUpdates() })
         menu.addItem(ClosureItem(title: "Вихід", key: "q") { NSApp.terminate(nil) })
     }
 
@@ -597,6 +598,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let it = ClosureItem(title: title) { [weak self] in change(); self?.cfg.save(); self?.updateIcon() }
         it.state = on ? .on : .off
         return it
+    }
+
+    var updateChecking = false
+
+    // Manual only: the app goes online just here, when the user clicks the menu item.
+    func checkUpdates() {
+        guard !updateChecking else { return }
+        updateChecking = true
+        var req = URLRequest(url: URL(string: "https://api.github.com/repos/ua50/autocopy/releases?per_page=50")!, timeoutInterval: 15)
+        req.setValue("AutoCopy/\(appVersion)", forHTTPHeaderField: "User-Agent")
+        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        URLSession.shared.dataTask(with: req) { data, resp, err in
+            var latest: String?
+            var error = err?.localizedDescription
+            if error == nil {
+                if let code = (resp as? HTTPURLResponse)?.statusCode, code != 200 { error = "GitHub відповів кодом \(code)" }
+                else if let data, let rel = try? JSONDecoder().decode([Release].self, from: data) {
+                    latest = rel.map(\.tag_name).filter { $0.hasPrefix("mac-v") }.map { String($0.dropFirst(5)) }
+                        .max { $0.compare($1, options: .numeric) == .orderedAscending }
+                } else { error = "незрозуміла відповідь GitHub" }
+            }
+            DispatchQueue.main.async { self.showUpdateResult(latest: latest, error: error) }
+        }.resume()
+    }
+
+    struct Release: Decodable { let tag_name: String }
+
+    func showUpdateResult(latest: String?, error: String?) {
+        updateChecking = false
+        let a = NSAlert()
+        a.messageText = "AutoCopy"
+        if let error {
+            a.alertStyle = .warning
+            a.informativeText = "Не вдалося перевірити оновлення:\n\(error)\n\nПеревірте інтернет або відкрийте сторінку вручну:\n\(homePage)"
+        } else if let latest, latest.compare(appVersion, options: .numeric) == .orderedDescending {
+            a.informativeText = "Доступна нова версія AutoCopy \(latest) (у вас \(appVersion))."
+            a.addButton(withTitle: "Завантажити")
+            a.addButton(withTitle: "Пізніше")
+            NSApp.activate(ignoringOtherApps: true)
+            if a.runModal() == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(URL(string: "\(homePage)/releases/tag/mac-v\(latest)")!)
+            }
+            return
+        } else {
+            a.informativeText = "У вас найновіша версія AutoCopy \(appVersion)."
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        a.runModal()
     }
 
     var aboutWindow: NSWindow?

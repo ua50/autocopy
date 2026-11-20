@@ -8,8 +8,10 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -20,12 +22,12 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyCompany("ODIZH")]
 [assembly: System.Reflection.AssemblyProduct("AutoCopy © 2026 ODIZH")]
 [assembly: System.Reflection.AssemblyCopyright("© 2026 ODIZH. Ліцензія MIT.")]
-[assembly: System.Reflection.AssemblyVersion("1.7.3.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.7.3.0")]
+[assembly: System.Reflection.AssemblyVersion("1.8.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.8.0.0")]
 
 static class Program
 {
-    public const string Version = "1.7.3";
+    public const string Version = "1.8.0";
     public const string HomePage = "https://github.com/ua50/autocopy";
 
     [STAThread]
@@ -404,10 +406,11 @@ class AutoCopyApp : ApplicationContext
         miAutostart = new ToolStripMenuItem("Запускати разом з Windows", null, (s, e) => { Autostart.Set(!Autostart.IsOn()); UpdateTray(); });
         var miExit = new ToolStripMenuItem("Вихід", null, (s, e) => ExitThread());
         var miAbout = new ToolStripMenuItem("Про AutoCopy…", null, (s, e) => ShowAbout());
+        var miUpdate = new ToolStripMenuItem("Перевірити оновлення…", null, (s, e) => CheckUpdates());
         miRightPanel = new ToolStripMenuItem("Панель вибору біля правого кліку над текстом", null, (s, e) => { cfg.RightPanel = !cfg.RightPanel; cfg.Save(); HidePanel(); UpdateTray(); });
 
         m.Items.AddRange(new ToolStripItem[] {
-            miAbout, new ToolStripSeparator(), miEnabled, new ToolStripSeparator(), miSound, miPopup, miNoHistory, miRightPanel, new ToolStripSeparator(),
+            miAbout, miUpdate, new ToolStripSeparator(), miEnabled, new ToolStripSeparator(), miSound, miPopup, miNoHistory, miRightPanel, new ToolStripSeparator(),
             miList, new ToolStripSeparator(), miAutostart, miExit });
         m.Opening += (s, e) => UpdateTray();
         tray.ContextMenuStrip = m;
@@ -441,6 +444,38 @@ class AutoCopyApp : ApplicationContext
         aboutOpen = true;
         try { using (var f = new AboutForm(iconOn)) f.ShowDialog(); }
         finally { aboutOpen = false; }
+    }
+
+    bool updateChecking;
+
+    // Manual only: the app goes online just here, when the user clicks the menu item.
+    void CheckUpdates()
+    {
+        if (updateChecking) return;
+        updateChecking = true;
+        var ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
+        ThreadPool.QueueUserWorkItem(_ =>
+        {
+            Version latest = null; string error = null;
+            try { latest = UpdateCheck.LatestVersion("win-v"); }
+            catch (Exception ex) { error = ex.Message; }
+            ui.Post(__ =>
+            {
+                updateChecking = false;
+                var current = new Version(Program.Version);
+                if (error != null)
+                    MessageBox.Show("Не вдалося перевірити оновлення:\n" + error + "\n\nПеревірте інтернет або відкрийте сторінку вручну:\n" + Program.HomePage,
+                                    "AutoCopy", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else if (latest == null || latest <= current)
+                    MessageBox.Show("У вас найновіша версія AutoCopy " + Program.Version + ".", "AutoCopy",
+                                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                else if (MessageBox.Show("Доступна нова версія AutoCopy " + latest + " (у вас " + Program.Version + ").\n\nВідкрити сторінку завантаження?",
+                                         "AutoCopy", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                {
+                    try { Process.Start(UpdateCheck.ReleasePage("win-v", latest)); } catch { }
+                }
+            }, null);
+        });
     }
 
     void ShowExclusions()
@@ -806,6 +841,38 @@ class PickPanel : Form
     }
 }
 
+// ───────────────── перевірка оновлень (GitHub Releases, лише на запит) ─────────────────
+static class UpdateCheck
+{
+    const string Api = "https://api.github.com/repos/ua50/autocopy/releases?per_page=50";
+
+    // Highest released version whose tag starts with the prefix ("win-v" / "mac-v"), or null if none.
+    public static Version LatestVersion(string prefix)
+    {
+        ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        string json;
+        using (var wc = new WebClient())
+        {
+            wc.Encoding = Encoding.UTF8;
+            wc.Headers[HttpRequestHeader.UserAgent] = "AutoCopy/" + Program.Version; // GitHub rejects requests without it
+            wc.Headers[HttpRequestHeader.Accept] = "application/vnd.github+json";
+            json = wc.DownloadString(Api);
+        }
+        Version best = null;
+        foreach (Match m in Regex.Matches(json, "\"tag_name\"\\s*:\\s*\"" + Regex.Escape(prefix) + "(\\d+(?:\\.\\d+){1,3})\""))
+        {
+            var v = new Version(m.Groups[1].Value);
+            if (best == null || v > best) best = v;
+        }
+        return best;
+    }
+
+    public static string ReleasePage(string prefix, Version v)
+    {
+        return Program.HomePage + "/releases/tag/" + prefix + v;
+    }
+}
+
 // ───────────────── «Про AutoCopy» ─────────────────
 // Layout via TableLayoutPanel + AutoSize (no fixed coordinates), so it is not clipped at 125–150 % DPI.
 class AboutForm : Form
@@ -831,7 +898,8 @@ class AboutForm : Form
             Text = "Виділив текст — і він уже в буфері обміну.\n\n" +
                    "Ctrl+Alt+V — вибрати одне з двох останніх скопійованих.\n" +
                    "Правий клік над текстом — панель «1 / 2».\n" +
-                   "Скопійоване зберігається лише в пам'яті, на диск і в мережу нічого не передається." };
+                   "Скопійоване зберігається лише в пам'яті й нікуди не передається.\n" +
+                   "В інтернет програма звертається тільки тоді, коли ви натиснете «Перевірити оновлення»." };
         var link = new LinkLabel { Text = "Сторінка програми й оновлення", AutoSize = true, Anchor = AnchorStyles.None };
         link.LinkClicked += (s, e) => { try { Process.Start(Program.HomePage); } catch { } };
         var copy = new Label { Text = "© 2026 ODIZH · Ліцензія MIT", AutoSize = true, Anchor = AnchorStyles.None,
