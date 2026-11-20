@@ -2,6 +2,7 @@
 AutoCopy.exe
 *.bak
 mac/build/
+mac/.signing_identity
 # personal settings and diagnostics
 settings.txt
 debug.on
