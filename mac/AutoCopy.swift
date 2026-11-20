@@ -294,7 +294,7 @@ struct AboutView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Link("Сторінка програми й оновлення", destination: URL(string: homePage)!)
                 .padding(.top, 4)
-            Text("© 2026 ODIZH. Усі права захищені.").foregroundStyle(.secondary)
+            Text("© 2026 ODIZH · Ліцензія MIT").foregroundStyle(.secondary)
             Button("OK", action: onClose).keyboardShortcut(.defaultAction).padding(.top, 6)
         }
         .padding(24)

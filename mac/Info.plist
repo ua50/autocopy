@@ -8,11 +8,11 @@
 	<key>CFBundleExecutable</key><string>AutoCopy</string>
 	<key>CFBundleIconFile</key><string>AppIcon</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
-	<key>CFBundleShortVersionString</key><string>1.1.1</string>
-	<key>CFBundleVersion</key><string>3</string>
+	<key>CFBundleShortVersionString</key><string>1.1.2</string>
+	<key>CFBundleVersion</key><string>4</string>
 	<key>CFBundleDevelopmentRegion</key><string>uk</string>
 	<key>LSMinimumSystemVersion</key><string>13.0</string>
 	<key>LSUIElement</key><true/>
-	<key>NSHumanReadableCopyright</key><string>© 2026 ODIZH. Усі права захищені.</string>
+	<key>NSHumanReadableCopyright</key><string>© 2026 ODIZH. Ліцензія MIT.</string>
 </dict>
 </plist>

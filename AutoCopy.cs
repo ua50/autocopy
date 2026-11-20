@@ -19,13 +19,13 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyDescription("AutoCopy — виділив текст, і він уже в буфері обміну. © 2026 ODIZH")]
 [assembly: System.Reflection.AssemblyCompany("ODIZH")]
 [assembly: System.Reflection.AssemblyProduct("AutoCopy © 2026 ODIZH")]
-[assembly: System.Reflection.AssemblyCopyright("© 2026 ODIZH. Усі права захищені.")]
-[assembly: System.Reflection.AssemblyVersion("1.7.2.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.7.2.0")]
+[assembly: System.Reflection.AssemblyCopyright("© 2026 ODIZH. Ліцензія MIT.")]
+[assembly: System.Reflection.AssemblyVersion("1.7.3.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.7.3.0")]
 
 static class Program
 {
-    public const string Version = "1.7.2";
+    public const string Version = "1.7.3";
     public const string HomePage = "https://github.com/ua50/autocopy";
 
     [STAThread]
@@ -834,7 +834,7 @@ class AboutForm : Form
                    "Скопійоване зберігається лише в пам'яті, на диск і в мережу нічого не передається." };
         var link = new LinkLabel { Text = "Сторінка програми й оновлення", AutoSize = true, Anchor = AnchorStyles.None };
         link.LinkClicked += (s, e) => { try { Process.Start(Program.HomePage); } catch { } };
-        var copy = new Label { Text = "© 2026 ODIZH. Усі права захищені.", AutoSize = true, Anchor = AnchorStyles.None,
+        var copy = new Label { Text = "© 2026 ODIZH · Ліцензія MIT", AutoSize = true, Anchor = AnchorStyles.None,
                                ForeColor = SystemColors.GrayText, Margin = new Padding(0, 8, 0, 12) };
         var ok = new Button { Text = "OK", AutoSize = true, Anchor = AnchorStyles.None, DialogResult = DialogResult.OK };
         AcceptButton = ok; CancelButton = ok;
