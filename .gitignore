@@ -1,0 +1,8 @@
+# build output
+AutoCopy.exe
+*.bak
+mac/build/
+# personal settings and diagnostics
+settings.txt
+debug.on
+debug.log
