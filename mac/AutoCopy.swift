@@ -279,6 +279,29 @@ struct ExclView: View {
     }
 }
 
+// ───────── «Про AutoCopy» ─────────
+struct AboutView: View {
+    let onClose: () -> Void
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 72, height: 72)
+            Text("AutoCopy \(appVersion)").font(.system(size: 18, weight: .bold))
+            Text("Виділив текст — і він уже в буфері обміну.")
+                .padding(.top, 4)
+            // \u{00A0} keeps «1 / 2» on one line
+            Text("Ctrl+Option+V — вибрати одне з двох останніх скопійованих.\nПравий клік у текстовому полі — панель «1\u{00A0}/\u{00A0}2».\nСкопійоване зберігається лише в пам'яті,\nна диск і в мережу нічого не передається.")
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Link("Сторінка програми й оновлення", destination: URL(string: homePage)!)
+                .padding(.top, 4)
+            Text("© 2026 ODIZH. Усі права захищені.").foregroundStyle(.secondary)
+            Button("OK", action: onClose).keyboardShortcut(.defaultAction).padding(.top, 6)
+        }
+        .padding(24)
+        .frame(width: 480)
+    }
+}
+
 // ───────── the app ─────────
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     let cfg = Config()
@@ -576,31 +599,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return it
     }
 
+    var aboutWindow: NSWindow?
+
+    // Own window instead of the standard About panel: that one has a fixed narrow width and wraps the text badly.
     func showAbout() {
-        let p = NSMutableParagraphStyle()
-        p.alignment = .center
-        let base: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 11), .paragraphStyle: p,
-                                                   .foregroundColor: NSColor.labelColor]
-        let credits = NSMutableAttributedString(string: """
-            Виділив текст — і він уже в буфері обміну.
-
-            Ctrl+Option+V — вибрати одне з двох останніх скопійованих.
-            Правий клік у текстовому полі — панель «1 / 2».
-            Скопійоване зберігається лише в пам'яті, на диск і в мережу нічого не передається.
-
-
-            """, attributes: base)
-        var linkAttrs = base
-        linkAttrs[.link] = URL(string: homePage)!
-        credits.append(NSAttributedString(string: "Сторінка програми й оновлення", attributes: linkAttrs))
+        if let w = aboutWindow { NSApp.activate(ignoringOtherApps: true); w.makeKeyAndOrderFront(nil); return }
+        let w = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        w.contentViewController = NSHostingController(rootView: AboutView { w.close() })
+        w.title = "Про AutoCopy"
+        w.isReleasedWhenClosed = false
+        w.center()
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { [weak self] _ in
+            self?.aboutWindow = nil
+        }
+        aboutWindow = w
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationName: "AutoCopy",
-            .applicationVersion: appVersion,
-            .version: "",
-            .credits: credits,
-            NSApplication.AboutPanelOptionKey(rawValue: "Copyright"): "© 2026 ODIZH. Усі права захищені.",
-        ])
+        w.makeKeyAndOrderFront(nil)
     }
 
     func toggleLogin() {
