@@ -41,4 +41,6 @@ Windows SmartScreen може попередити про невідомого в
 
 **English:** AutoCopy copies selected text to the clipboard automatically (Windows and macOS), keeps the last two copied texts in memory (Ctrl+Alt+V / Ctrl+Option+V or a panel next to the right-click menu) and never stores or sends them anywhere. Download from Releases.
 
-© 2026 ODIZH. Усі права захищені.
+## Ліцензія
+
+[MIT](LICENSE) © 2026 ODIZH. Можна вільно користуватися, змінювати й поширювати, у тому числі в комерційних цілях, якщо зберігається текст ліцензії з рядком про авторство. Програма надається «як є», без гарантій.
